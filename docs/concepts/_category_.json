@@ -1,0 +1,8 @@
+{
+  "label": "Conceitos",
+  "position": 2,
+  "link": {
+    "type": "generated-index",
+    "description": "Conceitos fundamentais sobre agentes de IA, RAG, embeddings e ferramentas."
+  }
+} 

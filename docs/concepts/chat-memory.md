@@ -1,0 +1,97 @@
+---
+sidebar_position: 3
+---
+
+# Chat Memory
+
+Chat Memory é um sistema que armazena e gerencia o histórico de conversas para dar contexto às interações com modelos de linguagem.
+
+## O que é Chat Memory?
+
+Chat Memory é um mecanismo para manter o contexto conversacional, permitindo que sistemas de IA lembrem o que foi discutido anteriormente e mantenham coerência ao longo da conversa.
+
+# Memória de Chat
+
+A memória de chat é um componente essencial em sistemas conversacionais de IA, permitindo que o modelo mantenha contexto ao longo da conversa.
+
+## Como funciona
+
+O diagrama abaixo ilustra o fluxo básico de uma conversa com memória:
+
+```mermaid
+sequenceDiagram
+    participant U as Usuário
+    participant M as Memória
+    participant AI as IA
+    
+    U->>AI: Olá, como vai?
+    AI->>M: Salvar mensagem
+    AI->>U: Olá! Estou bem, como posso ajudar?
+    U->>AI: Qual é a capital da França?
+    AI->>M: Consultar contexto
+    M->>AI: Contexto anterior
+    AI->>M: Salvar nova mensagem
+    AI->>U: A capital da França é Paris.
+    U->>AI: E qual é a população lá?
+    AI->>M: Consultar contexto
+    M->>AI: Contexto com menção a Paris
+    AI->>U: Paris tem população de aprox. 2,1 milhões.
+```
+
+## Benefícios
+
+1. **Contexto Contínuo**: Mantém o fluxo natural da conversa
+2. **Respostas Coerentes**: Evita repetições e mantém consistência
+3. **Experiência Natural**: Simula melhor uma conversa humana real
+
+## Tipos de Memória
+
+- **Memória de Curto Prazo**: Mantém contexto da conversa atual
+- **Memória de Longo Prazo**: Armazena informações entre sessões
+- **Memória Seletiva**: Filtra e prioriza informações relevantes
+
+### Importância
+- **Coerência:** Mantém a IA ciente do fluxo da conversa
+- **Referências Indiretas:** Permite resolver referências como "lá", "isso", "ele/ela"
+- **Personalização:** Adapta respostas com base em informações prévias
+- **Experiência Natural:** Cria conversas mais fluidas e humanas
+
+### Implementação Básica
+A implementação mais simples de chat memory é uma lista de mensagens:
+
+```ts
+interface ChatMessage {
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  timestamp?: Date;
+}
+
+class SimpleChatMemory {
+  private messages: ChatMessage[] = [];
+  
+  addMessage(message: ChatMessage): void {
+    this.messages.push({
+      ...message,
+      timestamp: new Date()
+    });
+  }
+  
+  getMessages(limit?: number): ChatMessage[] {
+    if (limit) {
+      return this.messages.slice(-limit);
+    }
+    return this.messages;
+  }
+  
+  clear(): void {
+    this.messages = [];
+  }
+}
+```
+
+### Armazenamento
+As mensagens de chat podem ser armazenadas em:
+- Redis: Para acesso rápido e TTL nativo
+- MongoDB: Para histórico persistente
+- Memória de Aplicação: Para sessões curtas
+- Híbrido: Redis para acesso rápido + MongoDB para backup 

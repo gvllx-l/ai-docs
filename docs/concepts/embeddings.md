@@ -1,0 +1,63 @@
+---
+sidebar_position: 2
+---
+
+# Embeddings
+
+Embeddings são representações vetoriais de dados, permitindo que textos, imagens ou outros conteúdos sejam convertidos em vetores numéricos que capturam significado semântico.
+
+## O que são Embeddings?
+
+Embeddings são vetores de números que representam o significado semântico de dados, permitindo que computadores "entendam" similaridades entre diferentes conteúdos.
+
+```mermaid
+graph LR
+    A["Texto: 'Como fazer bolo'"] -->|Modelo de Embedding| B["[0.12, 0.34, ..., 0.56]"]
+    C["Texto: 'Receita de bolo'"] -->|Modelo de Embedding| D["[0.14, 0.36, ..., 0.52]"]
+    B -.->|Similar| D
+```
+
+### Como Funcionam
+Embeddings transformam dados em vetores numéricos onde:
+- Conteúdos semanticamente similares ficam próximos no espaço vetorial
+- A "distância" entre vetores indica quão diferentes são os conteúdos
+- Significados e relacionamentos são capturados nas dimensões do vetor
+
+### Provedores de Embeddings
+
+| Provedor      | Modelo                 | Dimensões | Características                |
+|--------------|------------------------|-----------|-------------------------------|
+| OpenAI       | text-embedding-ada-002 | 1536      | Alta qualidade, amplamente usado|
+| Google       | text-embedding-gecko   | 768       | Boa relação custo-benefício    |
+| Cohere       | embed-english-v3.0     | 1024      | Bom para multilíngue           |
+| Azure OpenAI | text-embedding-ada-002 | 1536      | Para ambiente Azure            |
+| HuggingFace  | diversos modelos       | Varia     | Opções de código aberto        |
+
+#### Exemplo: Gerando Embeddings com OpenAI
+
+```ts
+import { OpenAI } from 'openai';
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+
+async function generateEmbedding(text: string): Promise<number[]> {
+  const response = await openai.embeddings.create({
+    model: "text-embedding-ada-002",
+    input: text,
+  });
+  
+  return response.data[0].embedding;
+}
+
+// Uso
+const embedding = await generateEmbedding("Como fazer um bolo de chocolate");
+console.log(`Dimensões do embedding: ${embedding.length}`);
+```
+
+### Aplicações Práticas
+- Busca Semântica: Encontrar documentos relevantes mesmo sem correspondência exata de palavras
+- Classificação de Texto: Categorizar conteúdo com base em significado
+- Recomendações: Sugerir itens similares
+- RAG: Encontrar informações relevantes para melhorar respostas de LLMs 

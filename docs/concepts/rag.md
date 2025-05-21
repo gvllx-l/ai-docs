@@ -1,0 +1,108 @@
+---
+sidebar_position: 4
+---
+
+# RAG (Retrieval Augmented Generation)
+
+RAG é uma técnica que combina recuperação de informações com geração de texto, permitindo que modelos de linguagem acessem e utilizem conhecimento externo durante a geração de respostas.
+
+## Como Funciona o RAG?
+
+O RAG integra busca por similaridade com geração de texto, permitindo respostas mais precisas e atualizadas.
+
+```mermaid
+sequenceDiagram
+    participant U as Usuário
+    participant LLM as Modelo de Linguagem
+    participant DB as Banco de Dados
+    
+    U->>LLM: Faz uma pergunta
+    LLM->>DB: Busca documentos relevantes
+    DB->>LLM: Retorna contexto
+    LLM->>U: Gera resposta com contexto
+```
+
+### Por que RAG é Importante?
+RAG resolve várias limitações dos LLMs puros:
+- **Conhecimento Atualizado:** Acesso a informações mais recentes que o treinamento do modelo
+- **Informação Específica:** Conhecimento personalizado e específico ao domínio
+- **Redução de Alucinações:** Respostas ancoradas em fontes confiáveis
+- **Citações:** Capacidade de referenciar fontes
+
+### Componentes de um Sistema RAG
+1. **Base de Conhecimento:** Documentos, artigos, FAQs, manuais
+2. **Pipeline de Indexação:** Chunking, embedding e armazenamento
+3. **Sistema de Recuperação:** Busca de documentos relevantes
+4. **Geração Aumentada:** Combinação de contexto com o LLM
+
+#### Exemplo: Implementação Básica de RAG
+
+```ts
+import { OpenAI } from 'openai';
+import { MongoClient } from 'mongodb';
+
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const mongodb = new MongoClient(process.env.MONGODB_URI);
+const collection = mongodb.db('knowledge').collection('documents');
+
+async function ragResponse(question: string) {
+  // 1. Criar embedding da pergunta
+  const queryEmbedding = await openai.embeddings.create({
+    model: "text-embedding-ada-002",
+    input: question
+  });
+  
+  // 2. Buscar documentos relevantes
+  const results = await collection.aggregate([
+    {
+      $vectorSearch: {
+        queryVector: queryEmbedding.data[0].embedding,
+        path: "embedding",
+        numCandidates: 100,
+        limit: 3
+      }
+    },
+    {
+      $project: {
+        content: 1,
+        score: { $meta: "vectorSearchScore" },
+        _id: 0
+      }
+    }
+  ]).toArray();
+  
+  // 3. Construir prompt com contexto
+  const context = results.map(doc => doc.content).join('\n\n');
+  
+  // 4. Gerar resposta com LLM + contexto
+  const response = await openai.chat.completions.create({
+    model: "gpt-3.5-turbo",
+    messages: [
+      {
+        role: "system",
+        content: "Você é um assistente útil que responde com base no contexto fornecido."
+      },
+      {
+        role: "user",
+        content: `
+          Contexto:
+          ${context}
+          
+          Pergunta: ${question}
+          
+          Responda à pergunta usando apenas as informações do contexto acima.
+        `
+      }
+    ]
+  });
+  
+  return response.choices[0].message.content;
+}
+```
+
+### Avaliação e Métricas
+Para medir a eficácia do seu sistema RAG:
+- **Precisão:** Quão corretas são as respostas
+- **Relevância do Contexto:** Se os documentos recuperados são relevantes
+- **Tempo de Resposta:** Latência total do sistema
+- **Utilização do Contexto:** Se a resposta utiliza as informações recuperadas 
