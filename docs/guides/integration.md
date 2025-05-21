@@ -340,6 +340,3 @@ graph TD
     D[Monitoramento] -->|Métricas| B
     E[Cache] -->|Performance| B
 ```
-
-### Considerações Importantes
-// ... existing code ... 
