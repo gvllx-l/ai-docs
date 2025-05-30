@@ -1,0 +1,297 @@
+---
+title: Tutorial - Construindo uma Aplicação RAG
+description: Este tutorial mostra como construir uma aplicação RAG (Retrieval Augmented Generation) do zero.
+---
+
+import { Mermaid } from '@/components/mdx/mermaid';
+
+# Tutorial: Construindo uma Aplicação RAG
+
+Este tutorial mostra como construir uma aplicação RAG (Retrieval Augmented Generation) do zero.
+
+## Arquitetura
+
+<Mermaid chart="graph TD
+    A[Frontend] -->|API| B[Backend]
+    B -->|Query| C[LLM]
+    B -->|Search| D[Vector DB]
+    E[Documents] -->|Process| F[Embeddings]
+    F -->|Store| D
+    C -->|Response| B
+    D -->|Context| C" />
+
+## Pré-requisitos
+
+- Node.js (v16+) e npm/yarn
+- MongoDB Atlas com Vector Search habilitado
+- Conta OpenAI ou outro provedor de LLM
+- Redis (opcional, para chat memory)
+
+## Etapa 1: Configuração Inicial
+
+Começamos criando o projeto e instalando as dependências necessárias.
+
+```bash
+# Criar diretório do projeto
+mkdir rag-app
+cd rag-app
+
+# Inicializar projeto
+npm init -y
+
+# Instalar dependências
+npm install express mongodb openai redis dotenv cors
+npm install typescript ts-node @types/node @types/express @types/cors --save-dev
+
+# Inicializar TypeScript
+npx tsc --init
+```
+
+Configurar arquivo `.env`:
+
+```
+# API Keys e Conexões
+OPENAI_API_KEY=sk-...
+MONGODB_URI=mongodb+srv://...
+REDIS_URL=redis://...
+
+# Configurações de Aplicação
+PORT=3000
+VECTOR_DIMENSION=1536
+```
+
+## Etapa 2: Estrutura do Projeto
+Organizar os arquivos do projeto:
+
+```bash
+mkdir -p src/{config,models,services,controllers,routes,utils}
+```
+
+```
+src/
+├── config/         # Configurações da aplicação
+├── models/         # Interfaces e tipos
+├── services/       # Lógica de negócio
+├── controllers/    # Handlers de requisição
+├── routes/         # Definição de rotas
+├── utils/          # Utilitários
+└── index.ts        # Ponto de entrada
+```
+
+## Etapa 3: Configuração de Conexões
+Criar arquivo de configuração para conexões externas:
+
+```ts
+// src/config/database.ts
+import { MongoClient } from 'mongodb';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+const uri = process.env.MONGODB_URI;
+const client = new MongoClient(uri);
+
+export async function connectToDatabase() {
+  try {
+    await client.connect();
+    console.log("Connected to MongoDB");
+    return client.db("rag_database");
+  } catch (error) {
+    console.error("Failed to connect to MongoDB:", error);
+    process.exit(1);
+  }
+}
+
+// src/config/openai.ts
+import { OpenAI } from "openai";
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+export const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+
+// src/config/redis.ts
+import { createClient } from 'redis';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+export async function connectToRedis() {
+  const client = createClient({
+    url: process.env.REDIS_URL
+  });
+
+  client.on('error', (err) => {
+    console.error('Redis error:', err);
+  });
+
+  await client.connect();
+  console.log('Connected to Redis');
+  
+  return client;
+}
+```
+
+## Etapa 4: Definindo Modelos
+Criar os tipos e interfaces necessários:
+
+```ts
+// src/models/document.ts
+export interface Document {
+  content: string;
+  metadata: {
+    source: string;
+    author?: string;
+    created?: Date;
+    title?: string;
+    category?: string;
+    [key: string]: any;
+  };
+}
+
+export interface EmbeddedDocument extends Document {
+  embedding: number[];
+}
+
+// src/models/chat.ts
+export interface ChatMessage {
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  timestamp?: Date;
+}
+
+// src/models/query.ts
+export interface QueryResult {
+  answer: string;
+  sources: {
+    content: string;
+    metadata: any;
+    score: number;
+  }[];
+}
+```
+
+## Etapa 5: Implementando Serviços
+Criando os serviços principais:
+
+```ts
+// src/services/embeddingService.ts
+import { openai } from '../config/openai';
+import { Document, EmbeddedDocument } from '../models/document';
+
+export async function generateEmbedding(text: string): Promise<number[]> {
+  const response = await openai.embeddings.create({
+    model: "text-embedding-ada-002",
+    input: text,
+  });
+  
+  return response.data[0].embedding;
+}
+
+export async function embedDocument(doc: Document): Promise<EmbeddedDocument> {
+  const embedding = await generateEmbedding(doc.content);
+  
+  return {
+    ...doc,
+    embedding
+  };
+}
+
+// src/services/vectorStoreService.ts
+import { Db, Collection } from 'mongodb';
+import { EmbeddedDocument, Document } from '../models/document';
+import { generateEmbedding } from './embeddingService';
+
+export class VectorStore {
+  private collection: Collection;
+  
+  constructor(db: Db) {
+    this.collection = db.collection('documents');
+  }
+  
+  async initialize() {
+    // Verificar se o índice existe
+    const indexes = await this.collection.listIndexes().toArray();
+    const hasVectorIndex = indexes.some(idx => idx.name === 'vector_index');
+    
+    if (!hasVectorIndex) {
+      console.log('Creating vector index...');
+      await this.collection.createIndex(
+        { embedding: "vector" },
+        {
+          name: "vector_index",
+          vectorSize: parseInt(process.env.VECTOR_DIMENSION || "1536"),
+          vectorSearchOptions: { similarity: "cosine" }
+        }
+      );
+    }
+  }
+  
+  async addDocument(doc: Document): Promise<void> {
+    const embedding = await generateEmbedding(doc.content);
+    
+    await this.collection.insertOne({
+      content: doc.content,
+      metadata: doc.metadata,
+      embedding,
+      created_at: new Date()
+    });
+  }
+  
+  async search(query: string, limit = 5): Promise<any[]> {
+    const embedding = await generateEmbedding(query);
+    
+    return await this.collection.aggregate([
+      {
+        $vectorSearch: {
+          queryVector: embedding,
+          path: "embedding",
+          numCandidates: 100,
+          limit
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          content: 1,
+          metadata: 1,
+          score: { $meta: "vectorSearchScore" }
+        }
+      }
+    ]).toArray();
+  }
+}
+```
+
+<Callout type="info">
+Este tutorial continua com mais implementações de serviços, controladores, rotas e o servidor principal. O código completo está disponível na documentação expandida.
+</Callout>
+
+## Testando a Aplicação
+
+```bash
+# Iniciar o servidor
+npm run dev
+
+# Em outro terminal, adicionar um documento
+curl -X POST http://localhost:3000/api/documents \
+  -H "Content-Type: application/json" \
+  -d '{"content": "MongoDB Atlas is a fully-managed cloud database service for modern applications.", "metadata": {"source": "manual-entry", "category": "database"}}'
+
+# Fazer uma consulta
+curl -X POST http://localhost:3000/api/query \
+  -H "Content-Type: application/json" \
+  -d '{"question": "What is MongoDB Atlas?", "sessionId": "test-session"}'
+```
+
+## Próximos Passos
+Para expandir a aplicação:
+1. Adicionar autenticação
+2. Implementar frontend
+3. Adicionar monitoramento
+4. Melhorar manejo de erros
+5. Adicionar testes
+
+Este tutorial mostrou como construir uma aplicação RAG completa, conectando todos os componentes que discutimos anteriormente. 

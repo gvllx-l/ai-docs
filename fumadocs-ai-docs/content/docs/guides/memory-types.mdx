@@ -1,0 +1,300 @@
+---
+title: Tipos de Memória
+description: Diferentes tipos de memória para sistemas conversacionais de IA
+---
+
+import { Mermaid } from '@/components/mdx/mermaid';
+
+# Tipos de Memória
+
+Existem diferentes tipos de memória que podem ser utilizados em sistemas conversacionais de IA, cada um com suas características e casos de uso específicos.
+
+## Visão Geral
+
+<Mermaid>
+{`graph TD
+    A[Tipos de Memória] --> B[Memória de Conversa]
+    A --> C[Memória de Resumo]
+    A --> D[Memória Vetorial]
+    A --> E[Memória de Entidades]
+    
+    B --> B1[Histórico Completo]
+    B --> B2[Janela Deslizante]
+    
+    C --> C1[Resumo Progressivo]
+    C --> C2[Resumo Periódico]
+    
+    D --> D1[Embeddings]
+    D --> D2[Busca Semântica]
+    
+    E --> E1[Extração]
+    E --> E2[Atualização]`}
+</Mermaid>
+
+### Memória de Conversa
+
+Existem diferentes abordagens para implementar memória de conversação, cada uma com casos de uso ideais.
+
+## Principais Tipos de Chat Memory
+
+### 1. Memória de Buffer Simples
+A forma mais básica, mantém as últimas N mensagens em uma lista.
+
+```typescript
+class BufferMemory {
+  private messages: ChatMessage[] = [];
+  private maxMessages: number;
+  
+  constructor(maxMessages = 10) {
+    this.maxMessages = maxMessages;
+  }
+  
+  addMessage(message: ChatMessage): void {
+    this.messages.push(message);
+    
+    // Mantém apenas as últimas N mensagens
+    if (this.messages.length > this.maxMessages) {
+      this.messages = this.messages.slice(-this.maxMessages);
+    }
+  }
+  
+  getMessages(): ChatMessage[] {
+    return this.messages;
+  }
+}
+```
+Melhor para: Conversas simples, uso com LLMs que têm context window limitada.
+
+### 2. Memória com Resumo
+Mantém um resumo da conversa anterior junto com as mensagens recentes.
+
+```typescript
+class SummaryMemory {
+  private messages: ChatMessage[] = [];
+  private summary: string = "";
+  private recentCount: number;
+  private llm: LLM;
+  
+  constructor(llm: LLM, recentCount = 4) {
+    this.llm = llm;
+    this.recentCount = recentCount;
+  }
+  
+  async addMessage(message: ChatMessage): Promise<void> {
+    this.messages.push(message);
+    
+    // A cada 5 mensagens, atualiza o resumo
+    if (this.messages.length % 5 === 0) {
+      await this.updateSummary();
+    }
+  }
+  
+  private async updateSummary(): Promise<void> {
+    const messagesToSummarize = this.messages.slice(0, -this.recentCount);
+    const messageText = messagesToSummarize
+      .map(m => `${m.role}: ${m.content}`)
+      .join('\n');
+    
+    this.summary = await this.llm.summarize(
+      `Resumo anterior: ${this.summary}\n\nNovas mensagens:\n${messageText}`
+    );
+    
+    // Mantém apenas as mensagens recentes
+    this.messages = this.messages.slice(-this.recentCount);
+  }
+  
+  getContext(): { summary: string, recentMessages: ChatMessage[] } {
+    return {
+      summary: this.summary,
+      recentMessages: this.messages
+    };
+  }
+}
+```
+Melhor para: Conversas longas, preservar contexto sem consumir todo o context window.
+
+### 3. Memória Categorizada
+Organiza memórias por tópicos ou categorias.
+
+```typescript
+interface TopicMemory {
+  topic: string;
+  messages: ChatMessage[];
+  lastAccessed: Date;
+}
+
+class CategorizedMemory {
+  private topics: Map<string, TopicMemory> = new Map();
+  private llm: LLM;
+  
+  constructor(llm: LLM) {
+    this.llm = llm;
+  }
+  
+  async addMessage(message: ChatMessage): Promise<void> {
+    // Identifica o tópico da mensagem
+    const topic = await this.llm.classifyTopic(message.content);
+    
+    if (!this.topics.has(topic)) {
+      this.topics.set(topic, {
+        topic,
+        messages: [],
+        lastAccessed: new Date()
+      });
+    }
+    
+    const topicMemory = this.topics.get(topic);
+    topicMemory.messages.push(message);
+    topicMemory.lastAccessed = new Date();
+  }
+  
+  async getRelevantContext(query: string): Promise<ChatMessage[]> {
+    // Identifica tópicos relevantes para a query
+    const relevantTopics = await this.llm.findRelevantTopics(
+      query, 
+      Array.from(this.topics.keys())
+    );
+    
+    // Combina mensagens dos tópicos relevantes
+    let relevantMessages: ChatMessage[] = [];
+    for (const topic of relevantTopics) {
+      if (this.topics.has(topic)) {
+        const topicMemory = this.topics.get(topic);
+        relevantMessages = relevantMessages.concat(topicMemory.messages);
+        topicMemory.lastAccessed = new Date();
+      }
+    }
+    
+    return relevantMessages;
+  }
+}
+```
+Melhor para: Conversas multitópico, agentes que lidam com diversos domínios.
+
+### 4. Memória com TTL
+Implementa "esquecimento" com base no tempo.
+
+```typescript
+class TTLMemory {
+  private messages: Map<string, { message: ChatMessage, expires: Date }> = new Map();
+  
+  addMessage(id: string, message: ChatMessage, ttlSeconds: number): void {
+    const expires = new Date();
+    expires.setSeconds(expires.getSeconds() + ttlSeconds);
+    
+    this.messages.set(id, { message, expires });
+  }
+  
+  getMessages(): ChatMessage[] {
+    const now = new Date();
+    const validMessages: ChatMessage[] = [];
+    
+    // Filtra mensagens expiradas
+    this.messages.forEach((value, key) => {
+      if (value.expires > now) {
+        validMessages.push(value.message);
+      } else {
+        this.messages.delete(key);
+      }
+    });
+    
+    return validMessages;
+  }
+}
+```
+Melhor para: Sistemas que precisam "esquecer" informações com o tempo.
+
+### 5. Memória com Redis
+Implementação usando Redis para persistência e TTL nativo.
+
+```typescript
+class RedisMemory {
+  private redis: Redis;
+  private prefix: string;
+  
+  constructor(redis: Redis, prefix = 'chat:') {
+    this.redis = redis;
+    this.prefix = prefix;
+  }
+  
+  async addMessage(chatId: string, message: ChatMessage, ttl = 3600): Promise<void> {
+    const key = `${this.prefix}${chatId}`;
+    
+    // Adiciona mensagem ao final da lista
+    await this.redis.rpush(key, JSON.stringify(message));
+    
+    // Define/renova TTL
+    await this.redis.expire(key, ttl);
+  }
+  
+  async getMessages(chatId: string): Promise<ChatMessage[]> {
+    const key = `${this.prefix}${chatId}`;
+    const rawMessages = await this.redis.lrange(key, 0, -1);
+    
+    return rawMessages.map(msg => JSON.parse(msg));
+  }
+  
+  async pruneMessages(chatId: string, maxMessages = 50): Promise<void> {
+    const key = `${this.prefix}${chatId}`;
+    const length = await this.redis.llen(key);
+    
+    if (length > maxMessages) {
+      // Remove mensagens mais antigas
+      await this.redis.ltrim(key, length - maxMessages, -1);
+    }
+  }
+}
+```
+Melhor para: Sistemas distribuídos, alta disponibilidade, escalabilidade.
+
+## Escolhendo o Tipo Adequado
+
+| Tipo de Memória   | Caso de Uso            | Vantagens                | Desvantagens                  |
+|-------------------|-----------------------|--------------------------|-------------------------------|
+| Buffer Simples    | Chatbots básicos      | Simples, baixo overhead  | Limitado para conversas longas|
+| Com Resumo        | Conversas extensas    | Mantém contexto longo    | Overhead de processamento     |
+| Categorizada      | Agentes multifunção   | Contexto por tópico      | Complexidade de implementação |
+| Com TTL           | Informações temporárias| Auto-limpeza             | Pode perder contexto importante|
+| Redis             | Produção, distribuído | Escalável, resiliente    | Dependência externa           |
+
+### Implementação Híbrida
+Na prática, muitos sistemas usam uma combinação:
+
+```typescript
+class HybridMemory {
+  private redis: RedisMemory;
+  private summary: SummaryMemory;
+  private llm: LLM;
+  
+  constructor(redis: Redis, llm: LLM) {
+    this.redis = new RedisMemory(redis);
+    this.summary = new SummaryMemory(llm);
+    this.llm = llm;
+  }
+  
+  async addMessage(chatId: string, message: ChatMessage): Promise<void> {
+    // Adiciona ao Redis para acesso rápido
+    await this.redis.addMessage(chatId, message);
+    
+    // Atualiza o resumo para conversas longas
+    await this.summary.addMessage(message);
+    
+    // Mantém tamanho gerenciável
+    await this.redis.pruneMessages(chatId);
+  }
+  
+  async getContext(chatId: string): Promise<string> {
+    const recentMessages = await this.redis.getMessages(chatId);
+    const { summary } = this.summary.getContext();
+    
+    return `
+      Resumo da conversa anterior:
+      ${summary}
+      
+      Conversas recentes:
+      ${recentMessages.map(m => `${m.role}: ${m.content}`).join('\n')}
+    `;
+  }
+}
+```
+Esta abordagem combina o melhor de vários mundos: persistência, escalabilidade, e contexto de longo prazo. 

@@ -1,0 +1,174 @@
+---
+title: Providers de LLM
+description: Guia completo dos principais provedores de Large Language Model (LLM) e suas ofertas em 2025.
+---
+
+# Providers de LLM
+
+## Visão Geral
+Provedores de Large Language Model (LLM) oferecem APIs e modelos para geração de texto, chat, código e tarefas multimodais. A escolha do provedor impacta qualidade, custo, latência e compliance. Este guia cobre os modelos mais recentes e suas capacidades em 2025.
+
+## Comparativo de Providers
+
+| Provider | Modelos Mais Recentes | Contexto | Capacidades | Preço (aprox) | Recursos Principais |
+|----------|----------------------|----------|-------------|---------------|-------------------|
+| OpenAI | GPT-4.5 Turbo | 1M tokens | Texto, Código, Visão, Áudio | $0.01/1K tokens | - Melhor qualidade geral<br/>- Recursos extensivos da API<br/>- Segurança empresarial |
+| Anthropic | Claude 3.5 (Opus, Sonnet, Haiku) | 1M tokens | Texto, Código, Visão | $0.015/1K tokens | - Raciocínio forte<br/>- IA Constitucional<br/>- Baixa alucinação |
+| Meta | Llama 4 (Scout, Maverick, Behemoth) | 128K tokens | Texto, Visão, Multilíngue | Grátis (open source) | - Arquitetura MoE<br/>- 17B-2T parâmetros<br/>- Uso comercial permitido |
+| Google | Gemini 2.0 (Ultra, Pro, Nano) | 1M tokens | Texto, Código, Visão, Áudio | $0.012/1K tokens | - Multimodal nativo<br/>- Raciocínio forte<br/>- Uso nativo de ferramentas |
+| Mistral | Mixtral-8x22B, Large | 128K tokens | Texto, Código | $0.007/1K tokens | - Modelos MoE eficientes<br/>- Forte performance/custo<br/>- Pesos abertos |
+| Cohere | Command-R | 128K tokens | Texto, Código | $0.008/1K tokens | - Especializado para RAG<br/>- Recursos empresariais<br/>- Fine-tuning customizado |
+| Together AI | DeepSeek-V3, Qwen2.5-Max | 128K tokens | Texto, Código, Visão | $0.005/1K tokens | - Múltiplas opções de modelo<br/>- Custo efetivo<br/>- Alto throughput |
+| Groq | Llama 4, Mixtral | 128K tokens | Texto, Código | $0.002/1K tokens | - Inferência mais rápida<br/>- Baixa latência<br/>- Pague por computação |
+
+## Desenvolvimentos Recentes
+
+### Arquitetura Mixture of Experts (MoE)
+Muitos provedores agora usam arquitetura MoE para melhor eficiência:
+
+- **Meta Llama 4**: 
+  - Scout (17B params ativos, 16 especialistas)
+  - Maverick (17B x 128 especialistas)
+  - Behemoth (2T parâmetros totais)
+
+- **Mistral**: 
+  - Mixtral-8x22B (8 especialistas por camada)
+  - Roteamento especializado para diferentes tarefas
+
+- **DeepSeek**: 
+  - V3 com 671B parâmetros usando MoE
+  - Otimizado para raciocínio e código
+
+### Comprimento de Contexto
+As janelas de contexto expandiram significativamente:
+
+- OpenAI, Anthropic, Google: 1M+ tokens
+- Maioria dos modelos abertos: 128K tokens padrão
+- Versões especiais disponíveis para contexto mais longo
+
+### Capacidades Multimodais
+Modelos mais recentes lidam com múltiplos tipos de entrada:
+
+- Texto, imagens, áudio, vídeo
+- Código com compreensão de sintaxe
+- Gráficos e diagramas
+- Processamento de PDF e documentos
+
+## Exemplos de Implementação
+
+### OpenAI GPT-4.5
+```typescript
+import { OpenAI } from 'openai';
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
+
+const completion = await openai.chat.completions.create({
+  model: "gpt-4.5-turbo",
+  messages: [
+    { role: "system", content: "You are a helpful assistant." },
+    { role: "user", content: "Explain quantum computing" }
+  ],
+  temperature: 0.7,
+  max_tokens: 1000
+});
+```
+
+### Claude 3.5
+```typescript
+import Anthropic from '@anthropic-ai/sdk';
+
+const anthropic = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY,
+});
+
+const message = await anthropic.messages.create({
+  model: "claude-3.5-sonnet",
+  max_tokens: 1000,
+  messages: [{ 
+    role: "user", 
+    content: "Explain quantum computing"
+  }]
+});
+```
+
+### Llama 4
+```typescript
+import { LlamaClient } from '@meta/llama-api';
+
+const llama = new LlamaClient({
+  apiKey: process.env.LLAMA_API_KEY
+});
+
+const response = await llama.complete({
+  model: "llama-4-scout",
+  prompt: "Explain quantum computing",
+  maxTokens: 1000,
+  temperature: 0.7
+});
+```
+
+## Melhores Práticas
+
+1. **Seleção de Modelo**:
+   - Considere requisitos da tarefa (qualidade vs custo)
+   - Verifique necessidades de comprimento de contexto
+   - Avalie capacidades multimodais
+   - Teste requisitos de latência
+
+2. **Otimização de Custo**:
+   - Use modelos menores para tarefas simples
+   - Implemente estratégias de cache
+   - Considere processamento em lote
+   - Monitore uso de tokens
+
+3. **Segurança e Compliance**:
+   - Revise políticas de tratamento de dados
+   - Verifique fontes de treinamento do modelo
+   - Confirme compliance regulatório
+   - Implemente controles de acesso adequados
+
+4. **Performance**:
+   - Use streaming para respostas em tempo real
+   - Implemente estratégias de retry
+   - Monitore limites de rate
+   - Considere fallbacks multi-provedor
+
+## Escolhendo um Provedor
+
+Considere estes fatores ao selecionar um provedor de LLM:
+
+1. **Requisitos da Tarefa**:
+   - Qualidade de geração de texto
+   - Capacidades de geração de código
+   - Necessidades multimodais
+   - Opções de fine-tuning
+
+2. **Fatores Técnicos**:
+   - Confiabilidade da API
+   - Qualidade da documentação
+   - Suporte SDK
+   - Facilidade de integração
+
+3. **Considerações de Negócio**:
+   - Modelo de preços
+   - Recursos empresariais
+   - Qualidade do suporte
+   - Requisitos de compliance
+
+4. **Prova de Futuro**:
+   - Roadmap do provedor
+   - Frequência de atualização de modelos
+   - Desenvolvimento de recursos
+   - Suporte da comunidade
+
+Sempre teste múltiplos provedores com seu caso de uso específico antes de tomar uma decisão final. Considere começar com um modelo menor e escalar conforme necessário.
+
+## Recursos
+
+- [Documentação da API OpenAI](https://platform.openai.com/docs)
+- [Documentação Claude Anthropic](https://docs.anthropic.com)
+- [Documentação Meta Llama 4](https://ai.meta.com/llama)
+- [Documentação Google Gemini](https://ai.google.dev)
+- [Documentação Mistral AI](https://docs.mistral.ai) 

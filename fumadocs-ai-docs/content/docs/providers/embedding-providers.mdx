@@ -1,0 +1,163 @@
+---
+title: Providers de Embeddings
+description: Comparativo detalhado dos principais providers de embeddings para IA generativa.
+---
+
+# Providers de Embeddings
+
+## Visão Geral
+Providers de embeddings transformam texto em vetores numéricos, essenciais para buscas semânticas, RAG e sistemas de IA generativa. A escolha do provider impacta performance, custo, qualidade e integração.
+
+## Comparativo de Providers
+
+| Provider        | Tipo             | Dimensões | Pontos Fortes                | Considerações         |
+|----------------|------------------|-----------|------------------------------|----------------------|
+| OpenAI         | Cloud            | 1536      | Alta qualidade, fácil de usar | Custo, lock-in       |
+| Cohere         | Cloud            | 1024      | Multilíngue, bom preço       | Menos conhecido      |
+| AWS Bedrock    | Cloud            | Varia     | Integração AWS, vários modelos| Complexidade AWS     |
+| Azure          | Cloud            | 1536      | Compliance, empresarial      | Requer Azure         |
+| Google Gemini  | Cloud            | Varia     | Multimodal, performance      | Novo no mercado      |
+| Google Vertex  | Cloud            | Varia     | Escalável, empresarial       | Complexo             |
+| HuggingFace    | Self-hosted      | Varia     | Open source, customizável    | Infraestrutura própria|
+| Mistral        | Cloud/Self-hosted| Varia     | Alta qualidade, flexível     | Novo no mercado      |
+| Ollama         | Self-hosted      | Varia     | Local, fácil de usar         | Performance limitada |
+
+---
+
+## OpenAI
+
+### Visão Geral
+OpenAI oferece embeddings de alta qualidade via API, amplamente usados em sistemas RAG.
+
+### Exemplo de Uso
+```typescript
+class OpenAIEmbeddings implements EmbeddingProvider {
+  constructor(private openai: OpenAI) {}
+  async generateEmbedding(text: string): Promise<number[]> {
+    const response = await this.openai.embeddings.create({
+      model: "text-embedding-ada-002",
+      input: text,
+    });
+    return response.data[0].embedding;
+  }
+}
+```
+
+---
+
+## Cohere
+
+### Visão Geral
+Cohere oferece embeddings multilíngues e preços competitivos.
+
+### Exemplo de Uso
+```typescript
+class CohereEmbeddings implements EmbeddingProvider {
+  constructor(private cohere: CohereClient) {}
+  async generateEmbedding(text: string): Promise<number[]> {
+    const response = await this.cohere.embed({
+      texts: [text],
+      model: 'embed-english-v3.0'
+    });
+    return response.embeddings[0];
+  }
+}
+```
+
+---
+
+## AWS Bedrock
+
+### Visão Geral
+AWS Bedrock integra múltiplos modelos de embeddings, ideal para stacks AWS.
+
+### Exemplo de Uso
+```typescript
+// Exemplo genérico, pois depende do modelo escolhido
+const response = await bedrockClient.invokeModel({
+  modelId: 'amazon.titan-embed-text-v1',
+  content: { inputText: 'texto' }
+});
+const embedding = response.embedding;
+```
+
+---
+
+## Azure
+
+### Visão Geral
+Azure oferece embeddings compatíveis com OpenAI, com foco em compliance e integração empresarial.
+
+### Exemplo de Uso
+```typescript
+const response = await openai.embeddings.create({
+  model: "text-embedding-ada-002",
+  input: "texto",
+  azure: true
+});
+const embedding = response.data[0].embedding;
+```
+
+---
+
+## Google Gemini / Vertex
+
+### Visão Geral
+Google oferece embeddings via Gemini e Vertex AI, com opções multimodais e escaláveis.
+
+### Exemplo de Uso
+```typescript
+const response = await vertexAI.generateEmbedding({
+  model: 'textembedding-gecko',
+  content: 'texto'
+});
+const embedding = response.embedding;
+```
+
+---
+
+## HuggingFace
+
+### Visão Geral
+HuggingFace permite rodar modelos open source localmente ou em cloud.
+
+### Exemplo de Uso
+```typescript
+import { pipeline } from '@xenova/transformers';
+const embed = await pipeline('feature-extraction', 'sentence-transformers/all-MiniLM-L6-v2');
+const embedding = await embed('texto');
+```
+
+---
+
+## Mistral
+
+### Visão Geral
+Mistral oferece modelos open source e APIs para embeddings de alta qualidade.
+
+### Exemplo de Uso
+```typescript
+// Exemplo genérico, depende do client
+const response = await mistralClient.embeddings({
+  input: 'texto',
+  model: 'mistral-embed'
+});
+const embedding = response.embedding;
+```
+
+---
+
+## Ollama
+
+### Visão Geral
+Ollama permite rodar modelos localmente, ideal para privacidade e prototipação.
+
+### Exemplo de Uso
+```typescript
+// Exemplo genérico, depende do modelo
+const response = await ollama.embeddings({
+  input: 'texto',
+  model: 'nomic-embed-text'
+});
+const embedding = response.embedding;
+``` 

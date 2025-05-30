@@ -1,0 +1,10 @@
+{
+  "title": "Documentação de Sistemas de IA",
+  "pages": [
+    "index",
+    "concepts",
+    "guides", 
+    "providers",
+    "tutorials"
+  ]
+} 

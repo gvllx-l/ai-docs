@@ -1,0 +1,99 @@
+---
+title: Instruções para Agentes de IA
+description: Diretrizes explícitas que definem o comportamento, capacidades e limitações de um agente de IA.
+---
+
+# Instruções para Agentes de IA
+
+Instruções (ou prompts de sistema) definem o comportamento, capacidades e limitações de um agente de IA.
+
+## O que são Instruções?
+
+Instruções são diretrizes explícitas para modelos de linguagem sobre como devem se comportar, responder e interagir com usuários. Elas definem a "personalidade" e o escopo de atuação do agente.
+
+<Mermaid chart="graph TD
+    A[Instruções do Sistema] --> B[Personalidade]
+    A --> C[Especialização]
+    A --> D[Limitações]
+    A --> E[Formato de Resposta]
+    A --> F[Fluxo de Trabalho]
+    G[Pergunta do Usuário] --> H[LLM]
+    A --> H
+    H --> I[Resposta Guiada pelas Instruções]" />
+
+### Componentes de Boas Instruções
+Instruções eficazes geralmente incluem:
+1. **Identidade:** Quem o agente é e qual sua função
+2. **Expertise:** Áreas de conhecimento específicas
+3. **Comportamento:** Tom, estilo e abordagem de comunicação
+4. **Limitações:** O que o agente não deve fazer
+5. **Formato:** Como estruturar respostas
+6. **Fluxos de Trabalho:** Passos para tarefas específicas
+
+### Exemplos de Instruções
+
+#### Agente de Suporte Técnico
+
+```ts
+const techSupportInstructions = `
+Você é um especialista em suporte técnico de TI, com foco em sistemas AWS.
+
+EXPERTISE:
+- Configuração de EC2, S3, Lambda e RDS
+- Troubleshooting de problemas comuns
+- Práticas recomendadas de segurança AWS
+
+COMPORTAMENTO:
+- Seja preciso e técnico, mas acessível
+- Solicite informações específicas quando necessário
+- Explique conceitos técnicos de forma clara
+- Priorize soluções práticas e seguras
+
+LIMITAÇÕES:
+- Não forneça acesso a contas ou credenciais
+- Não faça suposições sobre configurações não mencionadas
+- Indique claramente quando uma recomendação pode ter custos
+- Não execute comandos pelo usuário
+
+FLUXO DE TRABALHO:
+1. Identifique o problema específico
+2. Solicite informações de diagnóstico relevantes
+3. Ofereça soluções passo-a-passo
+4. Forneça referências à documentação relevante
+5. Verifique se o problema foi resolvido
+`;
+```
+
+### Implementação em um Sistema RAG
+
+```ts
+async function generateResponse(query: string, context: string) {
+  const response = await openai.chat.completions.create({
+    model: "gpt-3.5-turbo",
+    messages: [
+      {
+        role: "system",
+        content: techSupportInstructions  // Instruções do agente
+      },
+      {
+        role: "user",
+        content: `
+          Contexto técnico:
+          ${context}
+          
+          Consulta do cliente: ${query}
+        `
+      }
+    ]
+  });
+  
+  return response.choices[0].message.content;
+}
+```
+
+### Melhores Práticas
+- **Seja Específico:** Instruções vagas levam a comportamentos inconsistentes
+- **Priorize:** Liste os aspectos mais importantes primeiro
+- **Teste:** Avalie diferentes versões de instruções
+- **Itere:** Refine com base no feedback e comportamento observado
+- **Separe Claramente:** Diferencie instruções de sistema do conteúdo do usuário 

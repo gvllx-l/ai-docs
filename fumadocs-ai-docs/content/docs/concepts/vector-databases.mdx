@@ -1,0 +1,76 @@
+---
+title: Bancos de Dados Vetoriais
+description: Sistemas de armazenamento especializados em gerenciar e consultar dados representados como vetores multidimensionais.
+---
+
+# Bancos de Dados Vetoriais
+
+Bancos de dados vetoriais são sistemas de armazenamento especializados em gerenciar e consultar dados representados como vetores multidimensionais (embeddings).
+
+## O que são Bancos de Dados Vetoriais?
+
+Bancos de dados vetoriais são projetados para armazenar e consultar vetores numéricos de alta dimensão, permitindo buscas por similaridade em vez de correspondência exata.
+
+<Mermaid chart="graph TD
+    A[Dados] -->|Gerar Embedding| B[Vetor Numérico]
+    B -->|Armazenar| C[Banco Vetorial]
+    D[Consulta] -->|Gerar Embedding| E[Vetor de Consulta]
+    E -->|Busca por Similaridade| C
+    C -->|Resultados Similares| F[Documentos Relevantes]" />
+
+### Principais Características
+- **Busca por Similaridade:** Encontra vetores mais próximos usando métricas como similaridade de cosseno
+- **Alto Desempenho:** Otimizado para consultas em espaços de alta dimensão
+- **Escalabilidade:** Capacidade de lidar com bilhões de vetores
+
+### Opções Populares
+
+| Banco         | Tipo             | Melhor Para                  | Considerações            |
+|--------------|------------------|-----------------------------|--------------------------|
+| MongoDB Atlas| Cloud/Híbrido    | Integração com dados existentes | Requer MongoDB Atlas     |
+| PostgreSQL (pgvector) | Self-hosted | Solução completa com SQL     | Requer configuração      |
+| Pinecone     | Cloud            | Simplicidade, escala         | Custo mais alto          |
+| Weaviate     | Self-hosted/Cloud| Flexibilidade                | Mais complexo            |
+| Chroma       | Self-hosted      | Iniciar rapidamente          | Menos recursos           |
+
+#### Exemplo: Configurando MongoDB Atlas Vector Search
+
+```ts
+// Definir schema do documento
+interface DocumentWithEmbedding {
+  content: string;
+  embedding: number[];
+  metadata: Record<string, any>;
+}
+
+// Criar índice vetorial no MongoDB
+db.collection.createIndex(
+  { embedding: "vector" },
+  {
+    name: "vector_index",
+    vectorSize: 1536,  // Para embeddings OpenAI
+    vectorSearchOptions: {
+      similarityMetric: "cosine"
+    }
+  }
+);
+
+// Consulta de similaridade
+db.collection.aggregate([
+  {
+    $vectorSearch: {
+      queryVector: [0.1, 0.15, ...],
+      path: "embedding",
+      numCandidates: 100,
+      limit: 10
+    }
+  }
+]);
+```
+
+### Quando Usar
+Bancos de dados vetoriais são essenciais para:
+- Sistemas de recomendação
+- Busca semântica
+- Sistemas RAG (Retrieval-Augmented Generation)
+- Detecção de similaridade de conteúdo 
